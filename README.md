@@ -100,14 +100,23 @@ Users are encouraged to consult the **analysis-specific README** for methodologi
 InSituPREP must be installed inside a dedicated Python environment.  
 Installing the package into the system Python is strongly discouraged.
 
+Any standard environment manager (e.g. `venv`, `conda`, `mamba`) can be used.
+
 The framework requires **Python ≥ 3.11**.
+
+Example using `conda`:
+
+```bash
+conda create -n insituprep python=3.11
+conda activate insituprep
+```
 
 ### Installation
 
 Clone the repository and install in editable mode:
 
 ```bash
-git clone <repository-url>
+git clone <https://github.com/Tal-Goldberg/InSituPREP.git>
 cd InSituPREP_framework
 pip install -e .
 ```
