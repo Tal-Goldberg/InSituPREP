@@ -1,0 +1,21 @@
+# Python caches & build artifacts
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+dist/
+
+# Virtual envs
+.env
+.venv
+env/
+
+# OS / Editor
+.DS_Store
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# Others
+*.pyc
