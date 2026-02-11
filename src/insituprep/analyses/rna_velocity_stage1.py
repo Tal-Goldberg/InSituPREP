@@ -655,6 +655,9 @@ def stage1_t_preview(
 
     ground_truth = load_ground_truth_genes(ground_truth_txt)
 
+    def _tkey(t: float) -> float:
+        return round(float(t), 1)  # 0.2 grid -> 1 decimal is enough
+
     cells = _build_cells(
         pc_origin_path=pc_origin_path,
         spliced_counts_path=spliced_counts_path,
@@ -675,13 +678,15 @@ def stage1_t_preview(
 
     # default time grids (same values)
     if T is None:
-        T = list(np.arange(0.2, 12, 0.2))
+        T = [round(x, 1) for x in np.arange(0.2, 12, 0.2)]
     if T2 is None:
         T2 = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+    T2 = [_tkey(x) for x in T2]
 
     print("[stage1-d] Computing s(t) across multiple t values")
     print(f"[stage1-d] T grid size: {len(T)}")
     print(f"[stage1-d] Arrow plots for t values: {T2}")
+
 
     change_in_sum_s_per_cell_all_t = {}
     all_gene_level_dfs_per_t = {}
@@ -690,9 +695,12 @@ def stage1_t_preview(
     print("[stage1-d] Building gene-level DataFrames per t ...")
 
     for t in T:
-        # print only every ~1.0 step (when T is 0.2 increments)
-        if abs((float(t) * 10) % 10) < 1e-9:
-            print(f"[stage1-d] t = {t}")
+        t_val = float(t)          # value used for numerical computation
+        tk = _tkey(t_val)      # dictionary key (rounded to avoid float precision issues)
+
+        # Print only every ~1.0 step (T is in 0.2 increments)
+        if abs((tk * 10) % 10) < 1e-9:
+            print(f"[stage1-d] t = {tk}")
 
         sum_s_dict = {}
         S0_dict = {}
@@ -703,13 +711,17 @@ def stage1_t_preview(
         st_norm_filtered_dict = {}
         normal_v_dict = {}
         filtered_v_dict = {}
-        
+
         for cell in cells.values():
             cell.set_gammas(gammas)
 
             S0 = np.array(list(cell.S0.values()))
             S0_norm = np.array(list(cell.s0_norm.values()))
-            norm_st, filtered_norm_st, st, filtered_st, normal_v, filtered_v = cell.get_st(cells, float(t), filtered_genes)
+
+            # Use the raw float value for the actual s(t) computation
+            norm_st, filtered_norm_st, st, filtered_st, normal_v, filtered_v = cell.get_st(
+                cells, t_val, filtered_genes
+            )
 
             sum_S0 = np.sum(S0)
             sum_S0_norm = np.sum(S0_norm)
@@ -718,7 +730,14 @@ def stage1_t_preview(
             sum_st_norm = np.sum(norm_st)
             sum_st_norm_filtered = np.sum(filtered_norm_st)
 
-            sum_s_dict[cell.name] = [sum_S0, sum_S0_norm, sum_st, sum_st_filtered, sum_st_norm, sum_st_norm_filtered]
+            sum_s_dict[cell.name] = [
+                sum_S0,
+                sum_S0_norm,
+                sum_st,
+                sum_st_filtered,
+                sum_st_norm,
+                sum_st_norm_filtered,
+            ]
 
             S0_dict[cell.name] = S0
             S0_norm_dict[cell.name] = S0_norm
@@ -741,14 +760,23 @@ def stage1_t_preview(
         df_sum_s = pd.DataFrame.from_dict(
             sum_s_dict,
             orient="index",
-            columns=["S0", "S0_norm", "s(t)", "s(t)_filtered", "s(t)_norm", "s(t)_norm_filtered"],
+            columns=[
+                "S0",
+                "S0_norm",
+                "s(t)",
+                "s(t)_filtered",
+                "s(t)_norm",
+                "s(t)_norm_filtered",
+            ],
         )
-        df_sum_s_dict[float(t)] = df_sum_s
+
+        # Store per-t results using the rounded key
+        df_sum_s_dict[tk] = df_sum_s
 
         change_in_sum_s_per_cell_per_t = (df_sum_s["s(t)_filtered"] - df_sum_s["S0"]) / df_sum_s["S0"]
-        change_in_sum_s_per_cell_all_t[float(t)] = change_in_sum_s_per_cell_per_t
+        change_in_sum_s_per_cell_all_t[tk] = change_in_sum_s_per_cell_per_t
 
-        all_gene_level_dfs_per_t[float(t)] = {
+        all_gene_level_dfs_per_t[tk] = {
             "S0": df_S0,
             "S0_norm": df_S0_norm,
             "st": df_st,
@@ -776,9 +804,9 @@ def stage1_t_preview(
     print("[stage1-d] Generating PCA arrow plots ...")
 
     for t in T2:
-        S0 = all_gene_level_dfs_per_t[float(t)]["S0_norm"]
-        St = all_gene_level_dfs_per_t[float(t)]["st_norm_filtered"]
-
+        tk = _tkey(t)
+        S0 = all_gene_level_dfs_per_t[tk]["S0_norm"]
+        St = all_gene_level_dfs_per_t[tk]["st_norm_filtered"]
         total_counts_in_cell = St.sum(axis=1)
         mean_total_counts_in_cell = total_counts_in_cell.mean()
 
@@ -819,7 +847,7 @@ def stage1_t_preview(
         plt.ylabel("PC2", fontsize=32)
         plt.xticks(fontsize=18)
         plt.yticks(fontsize=18)
-        plt.title(f"T={int(t)}", fontsize=40)
+        plt.title(f"T={str(t)}", fontsize=40)
 
         #plt.xlim(-9, 15)
         #plt.ylim(-8, 13)

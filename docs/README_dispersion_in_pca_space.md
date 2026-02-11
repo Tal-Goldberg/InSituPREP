@@ -118,11 +118,18 @@ Notes:
 ---
 
 ### 2) Distance matrices folder (`--distance-dir`) - optional
-Directory containing CSV files where each file (per tissue) contains pairwise spatial distances between cells:
+
+Directory containing CSV files with pre-computed pairwise distances.
+
+Important:
+You must provide the directory path only (do not provide a specific distance matrix CSV file).
+The directory must contain one CSV file per tissue, and each file name must follow exactly this naming convention:
 
 ```
 distance_matrix_<TISSUE>.csv
 ```
+Where <TISSUE> matches the tissue ID used in the summary table.
+
 Example (`distance_matrix_313.csv`):
 
 |             | 313.1.001 | 313.1.021 | 313.1.022 | 313.1.023 |
@@ -135,6 +142,11 @@ Example (`distance_matrix_313.csv`):
 Rows and columns correspond to cell IDs within the same tissue.
 Each entry represents the pairwise spatial distance between two cells (in micrometers).
 Diagonal entries are set to `inf`.
+
+For each tissue <TISSUE>, the tool automatically loads:
+```
+<distance_dir>/distance_matrix_<TISSUE>.csv
+```
 
 Usage:
 For each primary cell, distances to all neighbor cells are queried from this matrix.

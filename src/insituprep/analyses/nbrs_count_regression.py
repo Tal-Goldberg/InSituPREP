@@ -45,44 +45,41 @@ def read_genes_list(genes_names_path: Path) -> List[str]:
     return genes
 
 
-def load_summary_table(summary_table_path: Path) -> pd.DataFrame:
-    """
-    Load the main summary table CSV.
-
-    Requirements:
-    - Must contain a 'Var1' column with unique cell IDs.
-    - 'Var1' is set as the DataFrame index (string).
-    - 'tissue' is treated as string (e.g., '100', 'MERFISH_880').
-    """
-    labels_full = pd.read_csv(summary_table_path)
-
-    if "Var1" not in labels_full.columns:
+def load_labels(labels_path: Path) -> pd.DataFrame:
+    """Load the summary table CSV. The Var1 column (cell IDs) is read as string
+    to preserve IDs like '1.9' vs '1.90' vs '1.900' (which collapse as float)."""
+    # Determine which column is Var1 so we can force it to string dtype
+    cols = pd.read_csv(labels_path, nrows=0).columns.tolist()
+    dtype = {}
+    if "Var1" in cols:
+        dtype["Var1"] = str
+    elif "cell_id" in cols:
+        dtype["cell_id"] = str
+    
+    df = pd.read_csv(labels_path, dtype=dtype)
+    
+    if "Var1" in df.columns:
+        df = df.rename(columns={"Var1": "cell_id"})
+    elif "cell_id" not in df.columns:
         raise ValueError(
-            f"summary_table_path must contain a 'Var1' column with unique cell IDs. "
-            f"Missing 'Var1' in: {summary_table_path}"
+            "Summary table must contain a 'Var1' or 'cell_id' column with cell identifiers."
         )
-
-    # set Var1 as the index explicitly
-    labels_full["Var1"] = labels_full["Var1"].astype(str)
-    labels_full = labels_full.set_index("Var1", drop=True)
-
-    if "tissue" in labels_full.columns:
-        labels_full["tissue"] = labels_full["tissue"].astype(str)
-
-    return labels_full
+    return df
 
 
-def load_distance_matrix(distance_dir: Path, tissue: str) -> pd.DataFrame:
-    """Load pre-computed distance matrix for a specific tissue without modifying IDs."""
+def load_distance_matrix(distance_dir: Path, tissue) -> pd.DataFrame:
+    """Load pre-computed distance matrix for a specific tissue.
+    Uses row/column labels exactly as stored in the CSV (cell IDs),
+    without adding any tissue prefix.
+    """
     fp = distance_dir / f"distance_matrix_{tissue}.csv"
     dist = pd.read_csv(fp, index_col=0)
-    # strip whitespace from index/columns but do NOT add or change any tissue prefix
+
+    # Ensure IDs are strings and consistent (no whitespace)
     dist.index = dist.index.map(lambda s: str(s).strip())
     dist.columns = [str(c).strip() for c in dist.columns]
-    # Convert matrix values to numeric (floats). Non-convertible -> NaN
-    dist = dist.apply(pd.to_numeric, errors="coerce")
-    return dist
 
+    return dist
 
 def calculate_neighbor_counts(
     sub_primary: pd.DataFrame,
@@ -115,15 +112,15 @@ def calculate_neighbor_counts(
 
 def get_cell_type_pairs(
     labels: pd.DataFrame,
-    tissue: str,
+    tissue,
     primary_cell_types: Optional[List[str]] = None,
     neighbor_cell_types: Optional[List[str]] = None,
 ) -> List[Tuple[str, str]]:
     """
-    Get all cell type pairs to analyze, dynamically from data.
+    Get all cell type pairs to analyze (including self-pairs), dynamically from data.
     If specific types provided, filters to those. Otherwise uses all types in data.
     """
-    labels_tissue = labels[labels["tissue"] == tissue]
+    labels_tissue = labels[labels["tissue"].astype(str) == str(tissue)]
     all_cell_types = labels_tissue["cell_type"].dropna().unique().tolist()
     
     if primary_cell_types is not None:
@@ -136,12 +133,13 @@ def get_cell_type_pairs(
     else:
         neighbor_types = all_cell_types
     
-    return [(p, n) for p in primary_types for n in neighbor_types if p != n]
+    return [(p, n) for p in primary_types for n in neighbor_types]
 
 
 def get_tissues(labels: pd.DataFrame) -> List[str]:
     """Get all unique tissue IDs from the data (as strings)."""
-    return labels["tissue"].dropna().astype(str).unique().tolist()
+    return [str(t) for t in labels["tissue"].dropna().unique().tolist()]
+
 
 def get_gene_columns(labels: pd.DataFrame, genes_names_path: Path) -> List[str]:
     """
@@ -218,7 +216,7 @@ def create_gene_plot(
     slope: float,
     intercept: float,
     r_value: float,
-    tissue: str,
+    tissue,
     target_cell: str,
     neighbor_cell: str,
     original_neighbor_counts: Optional[np.ndarray] = None,
@@ -334,7 +332,7 @@ def create_heatmap(
     target_cell: str,
     neighbor_cell: str,
     fdr_alpha: float = 0.05,
-    tissue_list: Optional[List[str]] = None,
+    tissue_list: Optional[List[int]] = None,
 ) -> Optional[plt.Figure]:
     """
     Create heatmap showing -log10(q-value) for significant genes across tissues.
@@ -403,7 +401,7 @@ def save_plots(
     neighbor_cell: str,
     dist_threshold: float,
     fdr_alpha: float = 0.05,
-    tissue_list: Optional[List[str]] = None,
+    tissue_list: Optional[List[int]] = None,
 ) -> None:
     """
     Save all plots for significant genes with descriptive names.
@@ -544,7 +542,7 @@ def analyze_method1(
     expression_df: pd.DataFrame,
     neighbor_counts: np.ndarray,
     genes: List[str],
-    tissue: str,
+    tissue,
     target_cell: str,
     neighbor_cell: str,
     params: NbrsCountRegressionParams,
@@ -599,7 +597,7 @@ def analyze_method2(
     expression_df: pd.DataFrame,
     neighbor_counts: np.ndarray,
     genes: List[str],
-    tissue: str,
+    tissue,
     target_cell: str,
     neighbor_cell: str,
     params: NbrsCountRegressionParams,
@@ -747,7 +745,7 @@ def analyze_method3(
     expression_df: pd.DataFrame,
     neighbor_counts: np.ndarray,
     genes: List[str],
-    tissue: str,
+    tissue,
     target_cell: str,
     neighbor_cell: str,
     params: NbrsCountRegressionParams,
@@ -856,7 +854,7 @@ def analyze_method3(
 def run_analysis(
     labels: pd.DataFrame,
     genes: List[str],
-    tissue: str,
+    tissue,
     target_cell: str,
     neighbor_cell: str,
     method: str,
@@ -879,23 +877,9 @@ def run_analysis(
         DataFrame with results
     """
     # Filter to tissue
-    labels_tissue = labels[labels["tissue"] == str(tissue)].copy()    
-
-    # Sanity check: verify distance-matrix cell IDs match summary-table IDs
-    if distance_matrix is not None:
-        labels_idx = labels_tissue.index.map(str).to_list()
-        dm_idx = distance_matrix.index.map(str).to_list()
-        dm_cols = distance_matrix.columns.map(str).to_list()
-
-        missing_in_dm = [i for i in labels_idx if i not in dm_idx and i not in dm_cols]
-        if missing_in_dm:
-            warnings.warn(
-                f"Neighbor count DM mismatch: {len(missing_in_dm)} cell IDs from labels "
-                f"not found in distance matrix for tissue {tissue}. "
-                f"Examples: {missing_in_dm[:5]}"
-            )
-
-
+    labels_tissue = labels[labels["tissue"].astype(str) == str(tissue)].copy()
+    labels_tissue = labels_tissue.reset_index(drop=True)
+    
     # Get cells by type
     primary_mask = labels_tissue["cell_type"] == target_cell
     neighbor_mask = labels_tissue["cell_type"] == neighbor_cell
@@ -906,10 +890,20 @@ def run_analysis(
     if len(sub_primary) == 0 or len(sub_neighbor) == 0:
         return pd.DataFrame()
     
-    # In summary-table mode, Var1 is already the DataFrame index (cell IDs).
-    sub_primary_dm = sub_primary
-    sub_neighbor_dm = sub_neighbor
-    
+    # For distance-matrix mode, set cell_id as index so .loc lookups work
+    if distance_matrix is not None:
+        sub_primary_dm = sub_primary.set_index("cell_id")
+        sub_neighbor_dm = sub_neighbor.set_index("cell_id")
+    else:
+        sub_primary_dm = sub_primary
+        sub_neighbor_dm = sub_neighbor
+
+    # Inform user which proximity source is used
+    if distance_matrix is not None:
+        print(f"[INFO] Tissue {tissue}: using distance matrix for neighbor counting.")
+    else:
+        print(f"[INFO] Tissue {tissue}: using coordinate-based distances (cKDTree).")
+
     # Calculate neighbor counts
     neighbor_counts = calculate_neighbor_counts(
         sub_primary_dm,

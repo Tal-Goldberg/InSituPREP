@@ -36,7 +36,7 @@ For each tissue and each ordered pair of cell types (primary → neighbor), the 
 2. **Define primary and neighbor cell types**
    - **Primary cell type**: cells whose gene expression is analyzed.
    - **Neighbor cell type**: cells used only to compute neighbor counts.
-   - All ordered pairs (primary ≠ neighbor) are evaluated unless restricted by the user.
+   - All ordered pairs are evaluated unless restricted by the user.
 
 3. **Count neighbors within distance threshold**
    - For each primary cell, count how many neighbor cells lie within the distance threshold (µm).
@@ -134,11 +134,16 @@ CD3E
 
 ### 3) Distance matrices directory (`--distance-dir`) — optional
 
-Directory containing CSV files with pre-computed pairwise distances:
+Directory containing CSV files with pre-computed pairwise distances.
+
+Important:
+You must provide the directory path only (do not provide a specific distance matrix CSV file).
+The directory must contain one CSV file per tissue, and each file name must follow exactly this naming convention:
 
 ```
 distance_matrix_<TISSUE>.csv
 ```
+Where <TISSUE> matches the tissue ID used in the summary table.
 
 Example (`distance_matrix_313.csv`):
 
@@ -152,6 +157,11 @@ Example (`distance_matrix_313.csv`):
 Rows and columns correspond to cell IDs within the same tissue.
 Each entry represents the pairwise spatial distance between two cells (in micrometers).
 Diagonal entries are set to `inf`.
+
+For each tissue <TISSUE>, the tool automatically loads:
+```
+<distance_dir>/distance_matrix_<TISSUE>.csv
+```
 
 Usage:
 For each primary cell, distances to all neighbor cells are queried from this matrix.
@@ -188,7 +198,7 @@ Behavior:
 - If a path exists but the file is missing, a warning is printed and marker filtering is skipped.
 
 Implementation details:
-- Marker genes are removed before regression to reduce potential segmentation artifacts.
+- Marker genes of the neighbor cell type are removed before regression to reduce potential segmentation artifacts.
 
 ---
 
@@ -214,7 +224,7 @@ Implementation details:
   Directory containing pre-computed distance matrices.
   If not provided, neighbor counts are computed from coordinates using cKDTree.
 
-- `--dist-threshold` FLOAT (optional) (default: `15.0`)  
+- `--dist-threshold` FLOAT (optional) (default: `40.0`)  
   Spatial distance threshold for counting neighbors (in the same units as the coordinate columns).
 
 - `--method`, `-m` TEXT (optional) (default: `1`)  
@@ -250,10 +260,13 @@ Implementation details:
 
 - `--neighbor-cell-types` TEXT (optional)  
   JSON list of neighbor cell types.
+  ```bash
+  --neighbor-cell-types '["Epithelial","T_CD3"]'
+  ```
   If omitted: uses **all** cell types found in the tissue.
 
 - `--marker-genes-by-tissue-json` PATH (optional)  
-  JSON mapping tissue ID to marker genes CSV path.
+  JSON mapping tissue ID to marker genes CSV path (neighbor-type marker genes are selected from the CSV and removed before regression).”
 
 - `--rng-seed` INTEGER (optional)  
   Random seed for reproducibility (Method 2 sampling).
@@ -365,7 +378,7 @@ insituprep nbrs-count-regression run \
   --genes-names-path data/genes_names.txt \
   --out results/nbrs_method1 \
   --method 1 \
-  --dist-threshold 15
+  --dist-threshold 40
 ```
 
 ### Run specific tissues with Method 2a (sampling-based)
@@ -376,7 +389,7 @@ insituprep nbrs-count-regression run \
   --out results/nbrs_method2a \
   --tissue '["100", "982"]' \
   --method 2a \
-  --dist-threshold 15 \
+  --dist-threshold 40 \
   --rng-seed 42
 ```
 
@@ -403,7 +416,7 @@ insituprep nbrs-count-regression run \
 
 ### With marker gene filtering
 ```bash
-insituprep nbrs-count-regression \
+insituprep nbrs-count-regression run \
   --summary-table-path data/summary_table.csv \
   --genes-names-path data/genes_names.txt \
   --out results/nbrs_markers \
@@ -413,7 +426,7 @@ insituprep nbrs-count-regression \
 
 ### With marker gene filtering and distance matrix 
 ```bash
-insituprep nbrs-count-regression \
+insituprep nbrs-count-regression run \
   --summary-table-path data/summary_table.csv \
   --genes-names-path data/genes_names.txt \
   --out results/nbrs_markers \

@@ -46,7 +46,7 @@ from statsmodels.stats.multitest import multipletests
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-
+import seaborn as sns
 
 # =========================
 # Parameters / configuration
@@ -1024,10 +1024,6 @@ def compute_sig_pairs_tsne(
 # =========================
 #   plot significant pairs
 # =========================
-
-import seaborn as sns  #
-
-
 def plot_sig_pairs_pca_panels(
     sig_pairs_df: pd.DataFrame,
     labels_full: pd.DataFrame,
@@ -1035,273 +1031,182 @@ def plot_sig_pairs_pca_panels(
     genes_names: List[str],
     dist_threshold: float,
     out_path: Path,
-    n_cols: int = 4,
-    max_panels: Optional[int] = None,
-    figsize_per_panel: Tuple[float, float] = (4.2, 5.2),
+    max_cols: int = 4,                 # unused, kept for compatibility
+    max_panels: Optional[int] = None,  # cap number of figures
+    panel_size: float = 4.0,
+    point_size: float = 18.0,
 ) -> None:
-    sig = sig_pairs_df.copy()
+    """
+    Create ONE standard matplotlib figure per significant pair (PNG).
 
-    # cap number of panels if requested
+    - Single figure, single Axes
+    - Standard ax.set_title (no suptitle)
+    - Standard ax.legend (no bbox_to_anchor)
+    - Saved under: <out_path.parent>/plots/{tissue}_{ct1}_{ct2}.png
+    """
+
+    sig = sig_pairs_df.copy()
+    if sig.empty:
+        print("No significant pairs to plot.")
+        return
+
     if max_panels is not None:
         sig = sig.iloc[: int(max_panels)].copy()
 
-    if sig.empty:
-        print("No significant pairs to plot (sig_pairs_df is empty).")
-        return
-
-    # make sure these are strings (consistent with distance-matrix IDs / labels index)
     sig["tissue"] = sig["tissue"].astype(str).str.strip()
     sig["cell_type_1"] = sig["cell_type_1"].astype(str).str.strip()
     sig["cell_type_2"] = sig["cell_type_2"].astype(str).str.strip()
 
-    n_total = len(sig)
-    n_rows = (n_total + n_cols - 1) // n_cols
-    fig_w = figsize_per_panel[0] * n_cols
-    fig_h = figsize_per_panel[1] * n_rows
+    plots_dir = Path(out_path).parent / "plots"
+    plots_dir.mkdir(parents=True, exist_ok=True)
 
-    fig, axs = plt.subplots(n_rows, n_cols, figsize=(fig_w, fig_h))
-    axs = np.array(axs).reshape(-1)
-
-    # cache DMs per tissue
     dm_cache: Dict[str, Optional[pd.DataFrame]] = {}
 
-    for pos, (_, row) in enumerate(sig.iterrows()):
-        ax = axs[pos]
+    def _safe(s: str) -> str:
+        return (
+            str(s)
+            .replace(" ", "_")
+            .replace("/", "_")
+            .replace("\\", "_")
+            .replace(":", "_")
+        )
 
-        tissue_number = str(row["tissue"])
-        cell_type_1 = str(row["cell_type_1"])
-        cell_type_2 = str(row["cell_type_2"])
-        title = f"Tissue: {tissue_number}\n{cell_type_1} vs {cell_type_2}"
+    saved = 0
 
-        # subset labels by tissue
-        labels = labels_full[labels_full["tissue"].astype(str) == str(tissue_number)].copy()
+    for _, row in sig.iterrows():
+        tissue = row["tissue"]
+        ct1 = row["cell_type_1"]
+        ct2 = row["cell_type_2"]
+
+        labels = labels_full[labels_full["tissue"].astype(str) == tissue].copy()
         labels.index = labels.index.astype(str)
-
-        cell_type_cells_1 = labels.index[labels["cell_type"] == cell_type_1].astype(str)
-        cell_type_cells_2 = labels.index[labels["cell_type"] == cell_type_2].astype(str)
-
-        if len(cell_type_cells_1) == 0 or len(cell_type_cells_2) == 0:
-            ax.set_title(f"{title}\n(no cells)", fontsize=12)
-            ax.axis("off")
+        if labels.empty:
             continue
 
-        # Load distance matrix once per tissue (if provided). If not provided, keep None.
-        if tissue_number not in dm_cache:
-            if distance_dir is None:
-                dm_cache[tissue_number] = None
-            else:
-                dm_path = distance_dir / f"distance_matrix_{str(tissue_number)}.csv"
-                if not dm_path.exists():
-                    dm_cache[tissue_number] = None
-                else:
-                    dm = pd.read_csv(dm_path, header=0, index_col=0)
-                    dm.index = dm.index.astype(str)
-                    dm.columns = dm.columns.astype(str)
-                    dm_cache[tissue_number] = dm
+        ct1_cells = labels.index[labels["cell_type"] == ct1]
+        ct2_cells = labels.index[labels["cell_type"] == ct2]
+        if len(ct1_cells) < 2 or len(ct2_cells) < 1:
+            continue
 
-        distance_matrix = dm_cache[tissue_number]
-        # NOTE: distance_matrix can be None (distance_dir not provided / file missing).
-        # In that case we fall back to coordinate-based proximity below.
-
-
-        # filter genes to those that exist in labels
         genes_existing = [g for g in genes_names if g in labels.columns]
         if len(genes_existing) < 2:
-            ax.set_title(f"{title}\n(<2 genes found in labels)", fontsize=10)
-            ax.axis("off")
             continue
 
-        raw_data = labels.loc[cell_type_cells_1, genes_existing].copy()
-        raw_data = raw_data.apply(pd.to_numeric, errors="coerce").dropna(axis=0, how="any")
-
+        raw_data = (
+            labels.loc[ct1_cells, genes_existing]
+            .apply(pd.to_numeric, errors="coerce")
+            .dropna(axis=0, how="any")
+        )
         if raw_data.shape[0] < 2:
-            ax.set_title(f"{title}\n(<2 cells for PCA)", fontsize=10)
-            ax.axis("off")
             continue
 
         # PCA
-        df_scaled = StandardScaler().fit_transform(raw_data.values)
-        pca_results = PCA(n_components=2).fit_transform(df_scaled)
-        pca_df = pd.DataFrame(pca_results, columns=["PC1", "PC2"], index=raw_data.index.astype(str))
+        X = StandardScaler().fit_transform(raw_data.values)
+        pcs = PCA(n_components=2).fit_transform(X)
+        pca_df = pd.DataFrame(pcs, columns=["PC1", "PC2"], index=raw_data.index)
 
+        # distance matrix (cached per tissue)
+        if tissue not in dm_cache:
+            dm = None
+            if distance_dir is not None:
+                dm_path = Path(distance_dir) / f"distance_matrix_{tissue}.csv"
+                if dm_path.exists():
+                    dm = load_distance_matrix(Path(distance_dir), tissue)
+            dm_cache[tissue] = dm
+        dm = dm_cache[tissue]
 
-        # --- Proximity labels (distance-matrix if available; otherwise coordinates fallback) ---
-        if distance_matrix is not None:
-            # Distance-matrix–based proximity
+        # proximity labels
+        if dm is not None:
             try:
-                prox_matrix = get_proximity(distance_matrix, pca_df.index, cell_type_cells_2, dist_threshold)
+                prox_matrix = get_proximity(
+                    dm, pca_df.index, ct2_cells, float(dist_threshold)
+                )
+                proximity_any = prox_matrix.any(axis=1).reindex(pca_df.index).fillna(False)
             except Exception:
-                ax.set_title(f"{title}\n(proximity failed: distance matrix)", fontsize=10)
-                ax.axis("off")
                 continue
-
-            if prox_matrix.shape[1] == 0:
-                ax.set_title(f"{title}\n(no ct2 in distance matrix)", fontsize=10)
-                ax.axis("off")
-                continue
-
-            proximity_any = prox_matrix.any(axis=1)
-
         else:
-            # Coordinate-based fallback: min distance(ct1 -> any ct2) <= threshold
-            proximity_any = get_proximity_any_from_coordinates(
-                labels_tissue=labels,          # labels already filtered to this tissue
-                ct1_index=pca_df.index,
-                ct2_index=cell_type_cells_2,
-                dist_threshold=dist_threshold,
-                x_col="X_space",
-                y_col="Y_space",
-                z_col="Z_space",
-            )
+            try:
+                proximity_any = get_proximity_any_from_coordinates(
+                    labels_tissue=labels,
+                    ct1_index=pca_df.index,
+                    ct2_index=ct2_cells,
+                    dist_threshold=float(dist_threshold),
+                )
+            except Exception:
+                continue
 
-        pca_df_full = pca_df.copy()
-        pca_df_full["proximity"] = proximity_any.map({True: "Proximal", False: "Distant"})
-
-
-        # handle one-state
-        if pca_df_full["proximity"].nunique() < 2:
-            ax.set_title(f"{title}\n(one proximity state)", fontsize=10)
-            ax.axis("off")
+        if proximity_any.nunique() < 2:
             continue
 
-        centroid = [pca_df_full["PC1"].mean(), pca_df_full["PC2"].mean()]
-        pca_df_true = pca_df_full[pca_df_full["proximity"] == "Proximal"]
-        pca_df_false = pca_df_full[pca_df_full["proximity"] == "Distant"]
-        centroid_true = [pca_df_true["PC1"].mean(), pca_df_true["PC2"].mean()]
-        centroid_false = [pca_df_false["PC1"].mean(), pca_df_false["PC2"].mean()]
+        is_prox = proximity_any.astype(bool).values
 
-        sns.scatterplot(
-            x="PC1", y="PC2", data=pca_df_full, ax=ax,
-            hue="proximity",
-            palette={"Proximal": "red", "Distant": "blue"},
-            s=26, edgecolor="black", alpha=0.7, legend=False
-        )
+        # ----------------
+        # Standard figure
+        # ----------------
+        fig, ax = plt.subplots(figsize=(panel_size, panel_size))
 
-        ax.scatter(centroid[0], centroid[1], color="yellow", edgecolor="black", s=45)
         ax.scatter(
-            [centroid_true[0], centroid_false[0]],
-            [centroid_true[1], centroid_false[1]],
-            color="green", edgecolor="black", s=45
+            pca_df.loc[~is_prox, "PC1"],
+            pca_df.loc[~is_prox, "PC2"],
+            s=point_size,
+            c="blue",
+            edgecolors="black",
+            linewidths=0.4,
+            alpha=0.75,
+            label="Distant cell",
+        )
+        ax.scatter(
+            pca_df.loc[is_prox, "PC1"],
+            pca_df.loc[is_prox, "PC2"],
+            s=point_size,
+            c="red",
+            edgecolors="black",
+            linewidths=0.4,
+            alpha=0.75,
+            label="Proximal cell",
         )
 
-        ax.set_title(title, fontsize=12)
-        ax.set_xlabel("PC1", fontsize=10)
-        ax.set_ylabel("PC2", fontsize=10)
-        ax.grid(True)
+        cen_all = pca_df[["PC1", "PC2"]].mean().values
+        cen_true = pca_df.loc[is_prox, ["PC1", "PC2"]].mean().values
+        cen_false = pca_df.loc[~is_prox, ["PC1", "PC2"]].mean().values
 
-        # metrics (support old/new column names)
-        def _get(col, default=np.nan):
-            return row[col] if col in row.index else default
-
-        rel_orig = _get("relative_original_distance_single_cen", _get("relative_original_dist_single_centroid"))
-        mean_rel = _get("mean_relative_perm_distance_single_cen_vec", _get("mean_relative_perm_dist_single_centroid"))
-        std_rel = _get("std_relative_perm_distance_single_cen_vec", _get("std_relative_perm_dist_single_centroid"))
-        max_z_orig = _get("max_z_score_original", _get("max_z_original"))
-        pval_gaus_fdr = _get("pval_gaus_fdr_bh", np.nan)
-
-        txt = (
-            f"relative orig single: {rel_orig:.3f}\n"
-            f"mean relative perm: {mean_rel:.3f}\n"
-            f"std relative perm: {std_rel:.3f}\n"
-            f"max z (orig): {max_z_orig:.2f}\n"
-            f"FDR p (gaus): {pval_gaus_fdr:.2e}"
+        ax.scatter(
+            cen_all[0], cen_all[1],
+            s=55, c="yellow", edgecolors="black",
+            linewidths=0.6, zorder=5,
+            label="Overall centroid",
+        )
+        ax.scatter(
+            [cen_true[0], cen_false[0]],
+            [cen_true[1], cen_false[1]],
+            s=55, c="green", edgecolors="black",
+            linewidths=0.6, zorder=5,
+            label="Proximal & distant centroids",
         )
 
-        ax.text(
-            0.5, -0.28, txt,
-            transform=ax.transAxes, ha="center", va="top", fontsize=8,
-            bbox=dict(facecolor="white", edgecolor="black", boxstyle="round,pad=0.2")
+        ax.set_title(f"Tissue: {tissue} | {ct1} vs {ct2}", fontsize=14, pad=10)
+        ax.set_xlabel("PC1")
+        ax.set_ylabel("PC2")
+        ax.grid(True, alpha=0.6)
+
+        ax.legend(
+            loc="upper left",
+            bbox_to_anchor=(1.02, 1.0),
+            borderaxespad=0.0,
+            fontsize=11,
         )
 
-    # remove unused axes
-    for k in range(n_total, len(axs)):
-        fig.delaxes(axs[k])
 
-    # legend
-    legend_elements = [
-        Line2D([0], [0], marker='o', linestyle='None',
-               markerfacecolor='red', markeredgecolor='black',
-               label='Proximal cell', markersize=9),
-        Line2D([0], [0], marker='o', linestyle='None',
-               markerfacecolor='blue', markeredgecolor='black',
-               label='Distant cell', markersize=9),
-        Line2D([0], [0], marker='o', linestyle='None',
-               markerfacecolor='yellow', markeredgecolor='black',
-               label='Overall centroid', markersize=9),
-        Line2D([0], [0], marker='o', linestyle='None',
-               markerfacecolor='green', markeredgecolor='black',
-               label='Proximal & distant centroids', markersize=9),
-    ]
+        if hasattr(ax, "set_box_aspect"):
+            ax.set_box_aspect(1)
 
+        out_png = plots_dir / f"{_safe(tissue)}_{_safe(ct1)}_{_safe(ct2)}.png"
+        fig.savefig(out_png, dpi=300, bbox_inches="tight")
+        plt.close(fig)
 
-    # ====== layout that is data/size-robust ======
-    TOP = 0.995           # top of figure in figure coords
-    PAD_TOP = 0.006       # small padding from top edge
-    GAP_TITLE_LEG = 0.006 # gap between title and legend
-    GAP_LEG_AXES = 0.010  # gap between legend and subplot grid
+        saved += 1
 
-    # Create title and legend once (positions will be corrected after measuring)
-    title = fig.suptitle(
-        "Significant combinations showing proximity-associated dispersion in PCA space",
-        fontsize=16, fontweight="bold", y=TOP
-    )
-
-    legend = fig.legend(
-        handles=legend_elements,
-        loc="upper center",
-        ncol=4,
-        frameon=True,
-        fontsize=10,
-        bbox_to_anchor=(0.5, TOP),   # temporary
-        bbox_transform=fig.transFigure
-    )
-
-    # Need a draw to get accurate extents
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-
-    ttl_bb = title.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
-    leg_bb = legend.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
-
-    ttl_h = ttl_bb.height
-    leg_h = leg_bb.height
-
-    # 1) Place title so its TOP edge is at (TOP - PAD_TOP)
-    title_top = TOP - PAD_TOP
-    title_y = title_top - ttl_h * 0.5
-    title.set_position((0.5, title_y))
-
-    # Redraw after moving title (optional but keeps measurements consistent)
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-    ttl_bb = title.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
-    ttl_h = ttl_bb.height
-
-    # 2) Place legend BELOW title with a small gap, centered
-    legend_top = ttl_bb.y0 - GAP_TITLE_LEG
-    legend_y = legend_top - leg_h * 0.5
-    legend.set_bbox_to_anchor((0.5, legend_y), transform=fig.transFigure)
-
-    # Recompute legend bbox after move
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-    leg_bb = legend.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
-
-    # 3) Move subplot grid TOP to be below legend
-    top_for_subplots = leg_bb.y0 - GAP_LEG_AXES
-    top_for_subplots = max(0.05, min(0.98, top_for_subplots))
-
-    fig.subplots_adjust(top=top_for_subplots, hspace=0.90, wspace=0.35)
-
-    # ✅ save to file
-    out_path = Path(out_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close(fig)
-
-    print(f"[plot_sig_pairs_pca_panels] saved figure: {out_path}")
-
-
+    print(f"[plot_sig_pairs_pca_panels] saved {saved} figures to {plots_dir}")
 
 # =========================
 # Orchestration: run across tissues + save outputs
@@ -1394,9 +1299,9 @@ def run_dispersion_in_pca_space(
         genes_names=genes_names,
         dist_threshold=params.dist_threshold,
         out_path=fig_path,
-        n_cols=params.plot_n_cols,
+        max_cols=params.plot_n_cols,
         max_panels=params.plot_max_panels,
-        figsize_per_panel=params.figsize_per_panel,
+        panel_size=float(np.mean(params.figsize_per_panel))
     )
 
     # ---- 3) Shuffled proximity all-pairs (PCA) ----

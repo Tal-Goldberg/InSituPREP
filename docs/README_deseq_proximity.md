@@ -177,6 +177,11 @@ Rows and columns correspond to cell IDs within the same tissue.
 Each entry represents the pairwise spatial distance between two cells (in micrometers).
 Diagonal entries are set to `inf`.
 
+
+In contrast to other analyses in insituprep that expect a directory containing per-tissue distance matrices (e.g., distance_matrix_<TISSUE>.csv), this DESeq analysis requires the full path to the specific distance matrix CSV file corresponding to the tissue being analyzed.
+
+Do not provide a directory path. You must provide the path to the exact CSV file for the selected
+
 Usage:
 For each primary cell, distances to all neighbor cells are queried from this matrix.
 A primary cell is labeled *proximal* if at least one neighbor cell has distance ≤ the specified threshold.
