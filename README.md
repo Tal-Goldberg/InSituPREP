@@ -117,7 +117,7 @@ Clone the repository and install in editable mode:
 
 ```bash
 git clone https://github.com/Tal-Goldberg/InSituPREP.git
-cd InSituPREP_framework
+cd InSituPREP
 pip install -e .
 ```
 ---
