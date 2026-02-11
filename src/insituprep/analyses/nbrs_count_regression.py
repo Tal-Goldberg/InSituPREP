@@ -73,7 +73,7 @@ def load_distance_matrix(distance_dir: Path, tissue) -> pd.DataFrame:
     without adding any tissue prefix.
     """
     fp = distance_dir / f"distance_matrix_{tissue}.csv"
-    dist = pd.read_csv(fp, index_col=0)
+    dist = pd.read_csv(fp, index_col=0, dtype={0: str})
 
     # Ensure IDs are strings and consistent (no whitespace)
     dist.index = dist.index.map(lambda s: str(s).strip())

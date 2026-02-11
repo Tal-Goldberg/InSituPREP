@@ -137,7 +137,7 @@ def load_labels(summary_table_path: Path) -> pd.DataFrame:
       - 'Var1' exists and is used as the index (cell IDs)
       - 'tissue' is treated as a string identifier
     """
-    labels_full = pd.read_csv(summary_table_path, header=0)
+    labels_full = pd.read_csv(summary_table_path, header=0, dtype={"Var1": str})
 
     if "Var1" not in labels_full.columns:
         raise ValueError(
@@ -164,9 +164,11 @@ def load_labels(summary_table_path: Path) -> pd.DataFrame:
 
 def load_distance_matrix(distance_dir: Path, tissue: str) -> pd.DataFrame:
     path = distance_dir / f"distance_matrix_{str(tissue)}.csv"
-    dm = pd.read_csv(path, header=0, index_col=0)
-    dm.index = dm.index.astype(str)
-    dm.columns = dm.columns.astype(str)
+    dm = pd.read_csv(path, header=0, index_col=0, dtype={0: str})
+    #dm.index = dm.index.astype(str)
+    #dm.columns = dm.columns.astype(str)
+    dm.index = dm.index.map(str)
+    dm.columns = dm.columns.map(str)
     return dm
 
 

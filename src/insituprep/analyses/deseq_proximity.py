@@ -267,7 +267,9 @@ def run_deseq_pairs(
 
     marker_genes_df = load_marker_genes_for_tissue(marker_genes_by_tissue, tissue=str(params.tissue))
 
-    labels_full = pd.read_csv(summary_table_path, header=0)
+    labels_full = pd.read_csv(summary_table_path, header=0, dtype={"Var1": str})
+    if "tissue" in labels_full.columns:
+        labels_full["tissue"] = labels_full["tissue"].astype(str)
 
     if "Var1" not in labels_full.columns:
         raise ValueError(
@@ -296,7 +298,7 @@ def run_deseq_pairs(
         if not Path(distance_matrix_path).exists():
             raise ValueError(f"distance_matrix_path does not exist: {distance_matrix_path}")
         
-        distance_matrix = pd.read_csv(distance_matrix_path, header=0, index_col=0)
+        distance_matrix = pd.read_csv(distance_matrix_path, header=0, index_col=0, dtype={0: str})
         distance_matrix.index = distance_matrix.index.astype(str)
         distance_matrix.columns = distance_matrix.columns.astype(str)
         print("[INFO] Using distance matrix for proximity.")

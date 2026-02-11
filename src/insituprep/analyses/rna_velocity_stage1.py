@@ -103,8 +103,8 @@ class CellsDict(dict):
         self.df = df_pc
         self.number_of_cells = self.df.shape[0]
 
-        spliced_df = pd.read_csv(spliced_counts_path, index_col=0)
-        unspliced_df = pd.read_csv(unspliced_counts_path, index_col=0)
+        spliced_df = pd.read_csv(spliced_counts_path, index_col=0, dtype={0: str})
+        unspliced_df = pd.read_csv(unspliced_counts_path, index_col=0, dtype={0: str})
 
         self.neighbors_csv_path = neighbors_csv_path
         self.first_run = first_run
@@ -373,7 +373,7 @@ def _build_cells(
     percentage: float,
 ) -> CellsDict:
     cells = CellsDict(
-        df_pc=pd.read_csv(pc_origin_path, index_col=0),
+        df_pc=pd.read_csv(pc_origin_path, index_col=0, dtype={0: str}),
         spliced_counts_path=spliced_counts_path,
         unspliced_counts_path=unspliced_counts_path,
         neighbors_csv_path=neighbors_csv_path,

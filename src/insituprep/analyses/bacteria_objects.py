@@ -564,7 +564,9 @@ def run_bacteria_objects(params: BacteriaObjectsParams) -> None:
 
     # Load cells
     # require a 'Var1' column that we explicitly set as index)
-    labels_full = pd.read_csv(params.summary_table_path)
+    labels_full = pd.read_csv(params.summary_table_path, dtype={"Var1": str})
+    if "tissue" in labels_full.columns:
+        labels_full["tissue"] = labels_full["tissue"].astype(str)
 
     # Validate presence of Var1 column and set as index explicitly (as requested)
     if "Var1" not in labels_full.columns:

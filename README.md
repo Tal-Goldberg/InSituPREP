@@ -148,6 +148,10 @@ Example (wide format; metadata + gene columns):
 
 Each analysis README specifies its exact requirements.
 
+**Important:** Cell IDs are categorical identifiers and must be treated as strings.
+Avoid purely numeric IDs (e.g., `12345`) that may be interpreted as integers or floats by CSV readers.
+We recommend including at least one non-numeric character in cell IDs (e.g., `cell_1001`, `T100`) or structured IDs such as `100.26.007`.
+
 ---
 
 ## Getting started

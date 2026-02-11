@@ -73,7 +73,9 @@ def ensure_dir(p: Path) -> Path:
     return p
 
 def load_summary_table(summary_table_path: Path) -> pd.DataFrame:
-    labels_full = pd.read_csv(summary_table_path)  # no index_col=0
+    labels_full = pd.read_csv(summary_table_path, dtype={"Var1": str})  # enforce Var1 as string
+    if "tissue" in labels_full.columns:
+        labels_full["tissue"] = labels_full["tissue"].astype(str)  
 
     if "Var1" not in labels_full.columns:
         raise ValueError(
@@ -87,7 +89,7 @@ def load_summary_table(summary_table_path: Path) -> pd.DataFrame:
     return labels_full
 
 def load_cells_df(pc_origin_path: Path, params: VelocityStage2Params) -> pd.DataFrame:
-    df = pd.read_csv(pc_origin_path, index_col=0)
+    df = pd.read_csv(pc_origin_path, index_col=0, dtype={0: str})
     df.index = df.index.astype(str)
 
     # basic checks
@@ -187,9 +189,11 @@ def compute_proximity_continuous_and_binary(
         if verbose:
             print(f"[PROX] tissue={tissue} | reading {dm_path.name}", flush=True)
 
-        dm = pd.read_csv(dm_path, index_col=0)
-        dm.index = dm.index.astype(str)
-        dm.columns = dm.columns.astype(str)
+        dm = pd.read_csv(dm_path, index_col=0, dtype={0: str})
+        #dm.index = dm.index.astype(str)
+        #dm.columns = dm.columns.astype(str)
+        dm.index = dm.index.map(str)
+        dm.columns = dm.columns.map(str)
 
         tissue_cells = full.loc[full[tissue_col].astype(str) == str(tissue)].index.astype(str).tolist()
         tissue_cells = list(set(tissue_cells).intersection(dm.index))
