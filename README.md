@@ -153,6 +153,7 @@ Avoid purely numeric IDs (e.g., `12345`) that may be interpreted as integers or 
 We recommend including at least one non-numeric character in cell IDs (e.g., `cell_1001`, `T100`) or structured IDs such as `100.26.007`.
 
 ---
+
 ## Example Dataset: Expansion Sequencing (ExSeq) Data (`ExSeq_data/`)
 
 The repository includes a fully reproducible example dataset under:
