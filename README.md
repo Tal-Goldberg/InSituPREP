@@ -153,6 +153,80 @@ Avoid purely numeric IDs (e.g., `12345`) that may be interpreted as integers or 
 We recommend including at least one non-numeric character in cell IDs (e.g., `cell_1001`, `T100`) or structured IDs such as `100.26.007`.
 
 ---
+## Example Dataset: Expansion Sequencing (ExSeq) Data (`ExSeq_data/`)
+
+The repository includes a fully reproducible example dataset under:
+
+    ExSeq_data/
+
+This directory contains real ExSeq spatial transcriptomics data inputs
+used for testing and demonstrating all InSituPREP analyses.
+
+### Directory structure
+
+    ExSeq_data/
+    ├── RNA_velocity/
+    ├── distance_matrix/
+    ├── marker_genes/
+    ├── genes_names.txt
+    ├── marker_genes_by_tissue.json
+    ├── summary_10tissues.csv
+    └── transcripts_tissue58.csv
+
+### Main components
+
+**summary_10tissues.csv**\
+Cell-level metadata and expression matrix.\
+Used via:
+
+``` bash
+--summary-table-path ExSeq_data/summary_10tissues.csv
+```
+
+**genes_names.txt**\
+Plain text file containing one gene name per line.
+Used to define the gene set and to extract the corresponding gene expression columns from the summary table for downstream analyses.
+
+``` bash
+--genes-names-path ExSeq_data/genes_names.txt
+```
+
+**distance_matrix/**\
+Precomputed cell-cell pairwise Euclidean distance matrices (one per tissue).
+
+``` bash
+--distance-matrix-dir ExSeq_data/distance_matrix/
+```
+
+If not provided, distances are computed from spatial coordinates in summary table.
+
+> **Note:** Distance matrices are not tracked in git due to GitHub file size limits.  
+> Please download them separately from:  
+> https://doi.org/10.5281/zenodo.17450066
+
+**RNA_velocity/**\
+Contains inputs for spatial RNA velocity:
+
+-   `counts_spliced.csv` → `--counts-spliced-path`
+-   `counts_unspliced.csv` → `--counts-unspliced-path`
+-   `PCs_origin_counts_spliced.csv` → `--pc-origin-path`
+-   `ground_truth_genes.txt` → `--ground-truth-genes-path` 
+
+**marker_genes/** and **marker_genes_by_tissue.json**\
+Precomputed marker gene resources used for sensitivity and comparison
+analyses.
+
+**transcripts_tissue58.csv**\
+Transcript-level spatial data used for bacteria object detection.
+
+``` bash
+--transcripts-path ExSeq_data/transcripts_tissue58.csv
+```
+
+The `ExSeq_data/` directory serves as a complete reproducible example
+dataset for testing and demonstration purposes.
+
+---
 
 ## Getting started
 
@@ -161,6 +235,19 @@ If you are new to the framework, a recommended entry point is:
 1. Read `docs/README_expression_as_function_of_distance.md`
 2. Run the corresponding CLI on a single tissue
 3. Explore additional analyses as complementary layers
+
+---
+
+## Data availability
+
+Large example files (precomputed distance matrices) are not tracked in git due to GitHub file size limitations.
+
+They can be downloaded from:
+
+https://doi.org/10.5281/zenodo.17450066
+
+After download, place them inside:
+ExSeq_data/distance_matrix/
 
 ---
 
