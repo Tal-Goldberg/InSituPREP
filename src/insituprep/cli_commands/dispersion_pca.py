@@ -15,7 +15,7 @@ app = typer.Typer(
     help=(
         "Dispersion in PCA space:\n"
         "Tests whether primary-type cells proximal to neighbor-type occupy a distinct region in PCA space\n"
-        "vs non-proximal primary cells. Includes permutation testing + BH-FDR and sensitivity analyses."
+        "vs non-proximal primary cells. Including permutation testing + BH-FDR and sensitivity analyses."
     )
 )
 
@@ -34,7 +34,7 @@ def _parse_json_list_of_strings(s: Optional[str], opt_name: str) -> Optional[Lis
 
 @app.command("run", help= "Dispersion in PCA space:\n"
         "Tests whether primary-type cells proximal to neighbor-type occupy a distinct region in PCA space "
-        "vs non-proximal primary cells. Includes permutation testing + BH-FDR and sensitivity analyses.")
+        "vs non-proximal primary cells. Including permutation testing + BH-FDR and sensitivity analyses.")
 def run(
     summary_table_path: Path = typer.Option(
         ...,
@@ -56,8 +56,8 @@ def run(
         exists=True,
         file_okay=False,
         help="Optional directory with per-tissue cell-cell distance matrices "
-            "('distance_matrix_{tissue}.csv'), containing pairwise cell–cell distances (µm). "
-            "Rows and columns correspond to cell IDs. "
+            "('distance_matrix_{tissue}.csv'), containing pairwise cell–cell distances (µm).\n\n "
+            "Rows and columns correspond to cell IDs.\n\n "
             "If omitted, proximity is computed from cell coordinates in the summary table file "
             "(X_space, Y_space, and optionally Z_space). "
     ),
@@ -92,18 +92,18 @@ def run(
     tissue: Optional[str] = typer.Option(
         None,
         "--tissue-ids",
-        help='JSON list of tissue IDs as strings. Example: \'["100","313"]\'. If omitted: run all tissues.',
+        help='JSON list of tissue IDs as strings.\n\n Example: \'["100","313"]\'.\n\n If omitted: run all tissues.',
     ),
     primary: Optional[str] = typer.Option(
         None,
         "--primary",
-        help='JSON list of primary cell types. Example: \'["Endothelial","T_CD3"]\'.'
+        help='JSON list of primary cell types.\n\n Example: \'["Endothelial","T_CD3"]\'.\n\n '
         'If omitted, all cell types are treated as primary.'
     ),
     neighbor: Optional[str] = typer.Option(
         None,
         "--neighbor",
-        help='JSON list of neighbor cell types. Example: \'["Epithelial","B"]\'.'
+        help='JSON list of neighbor cell types.\n\n Example: \'["Epithelial","B"]\'.\n\n'
         'If omitted, all cell types are treated as neighbor.'
     ),
     marker_genes_by_tissue_json: Optional[Path] = typer.Option(

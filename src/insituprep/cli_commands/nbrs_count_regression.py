@@ -106,7 +106,12 @@ def _parse_json_list(s: Optional[str], opt_name: str) -> Optional[List[str]]:
     return [str(v) for v in x]
 
 
-@app.command("run")
+@app.command("run",
+    help=(
+        "Neighbor Count Regression Analysis.\n"
+        "Analyzes the relationship between gene expression and number of neighboring cells.\n"
+        "Implements three regression methods: (1) linear, (2a/2b) sampling-based, (3.1/3.2) weighted."
+             ))
 def run(
     summary_table_path: Path = typer.Option(
         ..., "--summary-table-path", "-s",
@@ -134,7 +139,7 @@ def run(
     ),
     tissue: Optional[str] = typer.Option(
         None, "--tissue", "-t",
-        help='JSON list of tissue IDs. Example: \'[100,313]\'. If omitted: run all tissues.',
+        help='JSON list of tissue IDs.\n\n Example: \'[100,313]\'.\n\n If omitted: run all tissues.',
     ),
 
     # Distance options
@@ -202,11 +207,11 @@ def run(
     # Cell type filtering
     primary_cell_types: Optional[str] = typer.Option(
         None, "--primary-cell-types",
-        help='Primary cell types as JSON list. Example: \'["Endothelial","Smooth muscle"]\' (default: all).',
+        help='Primary cell types as JSON list.\n\n Example: \'["Endothelial","Smooth muscle"]\' (default: all).',
     ),
     neighbor_cell_types: Optional[str] = typer.Option(
         None, "--neighbor-cell-types",
-        help='Neighbor cell types as JSON list. Example: \'["Endothelial","Smooth muscle"]\' (default: all).',
+        help='Neighbor cell types as JSON list.\n\n Example: \'["Endothelial","Smooth muscle"]\' (default: all).',
     ),
 
     # Reproducibility

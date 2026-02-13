@@ -17,7 +17,7 @@ app = typer.Typer(
     help=(
         "Expression as a Function of Distance:\n"
         "Analyzes how gene expression in primary-type cells correlates with distance to neighbor-type cells.\n"
-        "Includes linear regression, permutation testing, FDR correction, and Gaussian R² filtering."
+        "Including linear regression, permutation testing, FDR correction, and Gaussian R² filtering."
     )
 )
 
@@ -34,17 +34,23 @@ def _parse_json_list_of_strings(s: Optional[str], opt_name: str) -> Optional[Lis
     return x
 
 
-@app.command("run")
+@app.command("run",
+    help=(
+        "Expression as a Function of Distance:\n"
+        "Analyzes how gene expression in primary-type cells correlates with distance to neighbor-type cells.\n"
+        "Including linear regression, permutation testing, FDR correction, and Gaussian R² filtering."
+
+))
 def run(
     summary_table_path: Path = typer.Option(
         ...,
         "--summary-table-path",
         exists=True,
-        help="CSV with per-cell metadata including coordinates (X_space, Y_space, Z_space) and gene expression. "
-            "Required columns: 'Var1' (cell IDs), 'tissue', 'cell_type'. "
-            "The table must also include columns: 'X_space', 'Y_space' (cell centroid coordinates in µm). "
+        help="CSV with per-cell metadata including coordinates (X_space, Y_space, Z_space) and gene expression.\n\n "
+            "Required columns: 'Var1' (cell IDs), 'tissue', 'cell_type'.\n\n "
+            "The table must also include columns: 'X_space', 'Y_space' (cell centroid coordinates in µm).\n\n "
             "The table should also include gene expression columns. "
-            "(one column per gene, raw numeric counts values). "
+            "(one column per gene, raw numeric counts values).\n\n "
             "Optional column 'Z_space' for 3D coordinates (defaults to 2D if absent). "
     ),
     genes_names_path: Path = typer.Option(
@@ -105,17 +111,17 @@ def run(
     tissue: Optional[str] = typer.Option(
         None,
         "--tissue",
-        help='JSON list of tissue IDs as strings. Example: \'["100","313"]\'. If omitted: run all tissues.',
+        help='JSON list of tissue IDs as strings.\n\n Example: \'["100","313"]\'.\n\n If omitted: run all tissues.',
     ),
     primary: Optional[str] = typer.Option(
         None,
         "--primary",
-        help='JSON list of primary cell types. Example: \'["Endothelial","T_CD3"]\'. If omitted: use all cell types.',
+        help='JSON list of primary cell types.\n\n Example: \'["Endothelial","T_CD3"]\'.\n\n If omitted: use all cell types.',
     ),
     neighbor: Optional[str] = typer.Option(
         None,
         "--neighbor",
-        help='JSON list of neighbor cell types. Example: \'["Epithelial","B"]\'. If omitted: use all cell types.',
+        help='JSON list of neighbor cell types.\n\n Example: \'["Epithelial","B"]\'.\n\n If omitted: use all cell types.',
     ),
 ):
     """

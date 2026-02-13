@@ -589,6 +589,10 @@ def _run_one_direction(
                 "Neighbor cell type": neighbor_label,
                 "ExSeq-MERFISH similarity p-value": _format_pvals_per_tissue(pairs_pv_df),
                 "Receptor status similarity p-value": (np.nan if receptor_pv is None else float(receptor_pv)),
+                # explained variance (NEW)
+                "PC1 explained variance": float(real_var[0]),
+                "PC2 explained variance": float(real_var[1]),
+
                 "PC1 p-value": float(p_values_PCs[0]),
                 "PC2 p-value": float(p_values_PCs[1]),
                 "Plot path": str(fig_path),
