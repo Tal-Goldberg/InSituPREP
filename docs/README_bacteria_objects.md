@@ -45,10 +45,10 @@ Required columns:
 | transcript_id   | Unique transcript identifier |
 | gene_name       | Gene name |
 | tissue          | Tissue ID (not necessary since it includes transcripts from only single tissue) |
-| cell_id         | Cell ID (can be empty for unassigned transcripts) |
-| x_micron        | X coordinate (µm) |
-| y_micron        | Y coordinate (µm) |
-| z_micron        | Z coordinate (µm) |
+| cell_id         | Cell ID the transcript assigned to (can be empty for unassigned transcripts) |
+| x_micron        | X coordinate (µm). Global transcript coordinates aligned with cell centroids in the summary table (Input 2) |
+| y_micron        | Y coordinate (µm). Global transcript coordinates aligned with cell centroids in the summary table (Input 2) |
+| z_micron        | Z coordinate (µm). Global transcript coordinates aligned with cell centroids in the summary table (Input 2) |
 
 Example:
 
@@ -58,7 +58,7 @@ Example:
 
 ---
 
-### 1) Summary table file path (`--summary-table-path`) (required)
+### 2) Summary table file path (`--summary-table-path`) (required)
 
 CSV with per-cell metadata and gene expression counts from all tissues.
 

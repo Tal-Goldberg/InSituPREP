@@ -194,6 +194,8 @@ Used to define the gene set and to extract the corresponding gene expression col
 
 **distance_matrix/**\
 Precomputed cell-cell pairwise Euclidean distance matrices (one per tissue).
+Distances are reported in microns **after tissue expansion** (×3.3 μm). Therefore, any distance threshold parameter specified by the user should be interpreted relative to the expanded scale (i.e., adjusted to the ×3.3 expansion factor).
+Row and column indices correspond to full cell IDs, including the tissue ID prefix, consistent with the identifiers in summary table csv file.
 
 ``` bash
 --distance-matrix-dir ExSeq_data/distance_matrix/
@@ -203,10 +205,12 @@ If not provided, distances are computed from spatial coordinates in summary tabl
 
 > **Note:** Distance matrices are not tracked in git due to GitHub file size limits.  
 > Please download them separately from:  
-> https://doi.org/10.5281/zenodo.17450066
+> https://doi.org/10.5281/zenodo.18648484
+> The relevant distance matrix directory named "distance_matrix_with_full_cell_ids" where row and column indices correspond to full cell IDs, including the tissue ID prefix, consistent with the identifiers in summary table csv file.
+
 
 **RNA_velocity/**\
-Contains inputs for spatial RNA velocity:
+Contains inputs for spatial RNA velocity (see the dedicated RNA velocity README for full details):
 
 -   `counts_spliced.csv` → `--counts-spliced-path`
 -   `counts_unspliced.csv` → `--counts-unspliced-path`
@@ -215,10 +219,10 @@ Contains inputs for spatial RNA velocity:
 
 **marker_genes/** and **marker_genes_by_tissue.json**\
 Precomputed marker gene resources used for sensitivity and comparison
-analyses.
+analyses. See the dedicated README files of dispersion in PCA space or DeSeq proximity analysis for full details.
 
 **transcripts_tissue58.csv**\
-Transcript-level spatial data used for bacteria object detection.
+Transcript-level spatial data used for bacteria object detection. (see the dedicated bacteria objects README for full details).
 
 ``` bash
 --transcripts-path ExSeq_data/transcripts_tissue58.csv
@@ -245,7 +249,7 @@ Large example files (precomputed distance matrices) are not tracked in git due t
 
 They can be downloaded from:
 
-https://doi.org/10.5281/zenodo.17450066
+https://doi.org/10.5281/zenodo.18648484
 
 After download, place them inside:
 ExSeq_data/distance_matrix/
